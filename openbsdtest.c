@@ -363,8 +363,8 @@ is_port_open(const char *ip, int port)
    int sock;
    struct sockaddr_in target;
    int result;
-       if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-       return 0;
+   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+       return 0; // ソケット作成失敗
    }
 
    /* タイムアウト設定 */
@@ -380,7 +380,7 @@ is_port_open(const char *ip, int port)
    inet_aton(ip, &target.sin_addr);
 
    result = connect(sock, (struct sockaddr*)&target, sizeof(target));
-   close(sock);
+   close(sock); // ソケットをすぐに閉じる
 
    return (result == 0);
 }
