@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      padding: 12px;
+      font-size: 13px;
+    }
+    h2 {
+      text-align: center;
+      font-size: 1rem;
+      color: #58a6ff;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    .options {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .opt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .opt span { font-size: 0.7rem; color: #8b949e; }
+    .toggle { position: relative; width: 36px; height: 20px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .knob {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #30363d; border-radius: 20px; transition: .25s;
+    }
+    .knob:before {
+      content: ""; position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; bottom: 3px;
+      background: #e6edf3; border-radius: 50%; transition: .25s;
+    }
+    input:checked + .knob { background: #238636; }
+    input:checked + .knob:before { transform: translateX(16px); }
+    .length-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px; padding: 0 4px;
+    }
+    .length-row span { font-size: 0.75rem; color: #8b949e; white-space: nowrap; }
+    .length-row b { color: #58a6ff; min-width: 26px; text-align: right; }
+    input[type=range] { flex: 1; accent-color: #58a6ff; }
+    .btn-refresh {
+      width: 100%; padding: 8px;
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      border: none; border-radius: 8px;
+      color: #fff; font-size: 0.85rem; font-weight: bold;
+      cursor: pointer; margin-bottom: 10px; transition: opacity .2s;
+    }
+    .btn-refresh:hover { opacity: .85; }
+    .pw-list { display: flex; flex-direction: column; gap: 5px; }
+    .pw-btn {
+      padding: 7px 10px;
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 6px; color: #c9d1d9;
+      font-family: "Courier New", monospace; font-size: 0.78rem;
+      cursor: pointer; text-align: left; word-break: break-all;
+      transition: all .18s;
+    }
+    .pw-btn:hover { background: #21262d; border-color: #58a6ff; }
+    .pw-btn.copied { background: #0d2115; border-color: #238636; color: #3fb950; }
+    .hint { text-align: center; font-size: 0.65rem; color: #484f58; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>🔐 Password Generator</h2>
+
+  <div class="options">
+    <div class="opt">
+      <span>大文字 A-Z</span>
+      <label class="toggle"><input type="checkbox" id="sw_cap"><span class="knob"></span></label>
+    </div>
+    <div class="opt">
+      <span>小文字 a-z</span>
+      <label class="toggle"><input type="checkbox" id="sw_low"><span class="knob"></span></label>
+    </div>
+    <div class="opt">
+      <span>数字 0-9</span>
+      <label class="toggle"><input type="checkbox" id="sw_num"><span class="knob"></span></label>
+    </div>
+    <div class="opt">
+      <span>記号 !@#</span>
+      <label class="toggle"><input type="checkbox" id="sw_sym"><span class="knob"></span></label>
+    </div>
+  </div>
+
+  <div class="length-row">
+    <span>長さ</span>
+    <input type="range" id="sl_len" min="5" max="32" value="12">
+    <b id="len_val">12</b><span>文字</span>
+  </div>
+
+  <button class="btn-refresh" onclick="refresh()">🔄 再生成</button>
+  <div class="pw-list" id="pw_list"></div>
+  <p class="hint">タップでクリップボードにコピー 📋</p>
+
+<script>
+  const CHARS = {
+    cap: [...Array(26)].map((_,i)=>String.fromCharCode(65+i)),
+    low: [...Array(26)].map((_,i)=>String.fromCharCode(97+i)),
+    num: [...Array(10)].map((_,i)=>String.fromCharCode(48+i)),
+    sym: [
+      ...[...Array(15)].map((_,i)=>String.fromCharCode(33+i)),
+      ...[...Array(7)] .map((_,i)=>String.fromCharCode(58+i)),
+      ...[...Array(6)] .map((_,i)=>String.fromCharCode(91+i)),
+      ...[...Array(4)] .map((_,i)=>String.fromCharCode(123+i)),
+    ]
+  };
+
+  // URLパラメータから初期値読み込み
+  const p = new URLSearchParams(location.search);
+  document.getElementById("sw_cap").checked = p.get("caps") !== "0";
+  document.getElementById("sw_low").checked = p.get("low")  !== "0";
+  document.getElementById("sw_num").checked = p.get("num")  !== "0";
+  document.getElementById("sw_sym").checked = p.get("sym")  !== "0";
+  const initLen = parseInt(p.get("length")) || 12;
+  document.getElementById("sl_len").value = initLen;
+  document.getElementById("len_val").textContent = initLen;
+
+  function shuffle(a) {
+    const b=[...a];
+    for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}
+    return b;
+  }
+
+  function genPw() {
+    const len = parseInt(document.getElementById("sl_len").value);
+    const pools = [];
+    if(document.getElementById("sw_cap").checked) pools.push([...CHARS.cap]);
+    if(document.getElementById("sw_low").checked) pools.push([...CHARS.low]);
+    if(document.getElementById("sw_num").checked) pools.push([...CHARS.num]);
+    if(document.getElementById("sw_sym").checked) pools.push([...CHARS.sym]);
+    if(!pools.length) return "種類を選択してね";
+    let pw = pools.map(pool=>shuffle(pool)[0]);
+    const all = pools.flat();
+    while(pw.length < len) pw.push(all[0|Math.random()*all.length]);
+    if(pw.length > len) pw = pw.slice(0, len);
+    return shuffle(pw).join("");
+  }
+
+  function refresh() {
+    const c = document.getElementById("pw_list");
+    c.innerHTML = "";
+    for(let i=0;i<10;i++){
+      const pw = genPw();
+      const btn = document.createElement("button");
+      btn.className = "pw-btn";
+      btn.textContent = pw;
+      btn.onclick = () => {
+        navigator.clipboard.writeText(pw).catch(()=>{});
+        btn.classList.add("copied");
+        btn.textContent = "✅ " + pw;
+      };
+      c.appendChild(btn);
+    }
+  }
+
+  document.getElementById("sl_len").addEventListener("input", function(){
+    document.getElementById("len_val").textContent = this.value;
+    refresh();
+  });
+  ["sw_cap","sw_low","sw_num","sw_sym"].forEach(id=>{
+    document.getElementById(id).addEventListener("change", refresh);
+  });
+
+  refresh();
+</script>
+</body>
+</html>

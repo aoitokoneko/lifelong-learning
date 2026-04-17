@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body>
+<script>
+window["ai_edge_gallery_get_result"] = async (data) => {
+  try {
+    const d = JSON.parse(data);
+    const length   = Math.min(32, Math.max(5, parseInt(d.length)  || 12));
+    const use_caps = d.use_caps !== false;
+    const use_low  = d.use_low  !== false;
+    const use_num  = d.use_num  !== false;
+    const use_sym  = d.use_sym  !== false;
+
+    if (!use_caps && !use_low && !use_num && !use_sym) {
+      return JSON.stringify({ error: "Please enable at least one character type." });
+    }
+
+    const params = new URLSearchParams({
+      length,
+      caps: use_caps ? 1 : 0,
+      low:  use_low  ? 1 : 0,
+      num:  use_num  ? 1 : 0,
+      sym:  use_sym  ? 1 : 0
+    });
+
+    return JSON.stringify({
+      result: "Here are your generated passwords. Tap any one to copy it!",
+      webview: {
+        url: "webview.html?" + params.toString(),
+        aspectRatio: 1.6
+      }
+    });
+  } catch (e) {
+    return JSON.stringify({ error: "Failed: " + e.message });
+  }
+};
+</script>
+</body>
+</html>
