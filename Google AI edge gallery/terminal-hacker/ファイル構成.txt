@@ -1,0 +1,16 @@
+完成品諸々アップロードしたら、完全アウトな為。
+あくまでも、技術的に出来たよ。という研究記録。
+ファイル構成を載せる為。これを参考に更に発展になればと、、、
+
+$ ls -R
+.:
+SKILL.md  assets  scripts
+
+./assets:
+sounds  terminal.css  terminal.js  webview.html
+
+./assets/sounds:
+x.ogg 諸々は、伏せます。せめて、拡張子だけ。
+
+./scripts:
+index.html
